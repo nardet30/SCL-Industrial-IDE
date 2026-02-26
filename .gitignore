@@ -1,0 +1,9 @@
+# Archivos a ignorar en el repositorio SCL Industrial IDE
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+*.log
+historial_proyecto.txt
+.vscode/
+.idea/

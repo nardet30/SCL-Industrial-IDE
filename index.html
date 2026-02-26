@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCL Industrial IDE - IEC 61131-3 Compliance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500&family=Inter:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        industrial: {
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155',
+                            accent: '#3b82f6',
+                            warning: '#f59e0b',
+                            success: '#10b981',
+                            error: '#ef4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .glow-accent {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .editor-line-numbers {
+            background: rgba(15, 23, 42, 0.5);
+            text-align: right;
+            padding-right: 1rem;
+            user-select: none;
+        }
+
+        #scl-editor {
+            resize: none;
+            outline: none;
+            caret-color: #3b82f6;
+        }
+
+        .syntax-keyword {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .syntax-type {
+            color: #3b82f6;
+        }
+
+        .syntax-var {
+            color: #f59e0b;
+        }
+
+        .syntax-comment {
+            color: #64748b;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body class="bg-industrial-900 text-slate-200 font-sans h-screen overflow-hidden flex flex-col">
+
+    <!-- Header / Navigation -->
+    <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-industrial-900 z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-industrial-accent rounded flex items-center justify-center glow-accent">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m18 16 4-4-4-4" />
+                    <path d="m6 8-4 4 4 4" />
+                    <path d="m14.5 4-5 16" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">SCL <span class="text-industrial-accent">Industrial
+                        IDE</span></h1>
+                <p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">IEC 61131-3 Standard
+                    Compliant</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 px-3 py-1 bg-slate-800/50 rounded-full border border-slate-700 text-xs">
+                <span class="w-2 h-2 rounded-full bg-industrial-success animate-pulse"></span>
+                <span class="text-slate-400">Motor Engine: v2.4.0</span>
+            </div>
+            <button
+                class="px-4 py-2 bg-industrial-accent hover:bg-blue-600 transition-all rounded-md text-sm font-semibold flex items-center gap-2 shadow-lg shadow-blue-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Exportar Proyecto
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+
+        <!-- Side Library -->
+        <aside class="w-72 border-r border-slate-800 flex flex-col glass-panel">
+            <div class="p-4 border-b border-slate-800">
+                <h2 class="text-xs uppercase tracking-tighter text-slate-500 font-bold mb-4">Librerías Estándar</h2>
+                <div class="relative">
+                    <input type="text" placeholder="Buscar bloques..."
+                        class="w-full bg-slate-900 border border-slate-700 rounded-md py-2 px-3 text-xs focus:border-industrial-accent outline-none">
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-2 space-y-4 scrollbar-hide" id="library-list">
+                <!-- BIE (Bloques Integrados Estándar) -->
+                <div class="space-y-1">
+                    <button
+                        class="w-full text-left px-3 py-2 text-[10px] font-bold text-slate-500 uppercase flex items-center justify-between hover:text-white group">
+                        Control de Tiempo
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="w-3 h-3 transition-transform group-hover:translate-y-1 text-industrial-accent"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m6 9 6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="pl-2 space-y-1">
+                        <div draggable="true" title="Click para insertar"
+                            class="p-2 bg-slate-800/20 hover:bg-industrial-accent/10 rounded border border-slate-800/50 hover:border-industrial-accent/30 text-[11px] cursor-pointer flex items-center justify-between transition-all group">
+                            <span><span class="text-industrial-accent font-mono mr-1">FB</span> TON</span>
+                            <span
+                                class="opacity-0 group-hover:opacity-100 text-[9px] text-industrial-accent">INSERT</span>
+                        </div>
+                        <div draggable="true" title="Click para insertar"
+                            class="p-2 bg-slate-800/20 hover:bg-industrial-accent/10 rounded border border-slate-800/50 hover:border-industrial-accent/30 text-[11px] cursor-pointer flex items-center justify-between transition-all group">
+                            <span><span class="text-industrial-accent font-mono mr-1">FB</span> TOF</span>
+                            <span
+                                class="opacity-0 group-hover:opacity-100 text-[9px] text-industrial-accent">INSERT</span>
+                        </div>
+                        <div draggable="true" title="Click para insertar"
+                            class="p-2 bg-slate-800/20 hover:bg-industrial-accent/10 rounded border border-slate-800/50 hover:border-industrial-accent/30 text-[11px] cursor-pointer flex items-center justify-between transition-all group">
+                            <span><span class="text-industrial-accent font-mono mr-1">FB</span> TP</span>
+                            <span
+                                class="opacity-0 group-hover:opacity-100 text-[9px] text-industrial-accent">INSERT</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <button
+                        class="w-full text-left px-3 py-2 text-[10px] font-bold text-slate-500 uppercase flex items-center justify-between hover:text-white group">
+                        Matemáticas & LOG
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 group-hover:translate-y-1 text-slate-400"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m6 9 6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="pl-2 space-y-1">
+                        <div draggable="true"
+                            class="p-2 bg-slate-800/20 hover:bg-slate-700/30 rounded border border-slate-800/50 text-[11px] cursor-pointer flex items-center gap-2">
+                            <span class="text-blue-400 font-mono">FC</span> ABS / SQRT
+                        </div>
+                        <div draggable="true"
+                            class="p-2 bg-slate-800/20 hover:bg-slate-700/30 rounded border border-slate-800/50 text-[11px] cursor-pointer flex items-center gap-2">
+                            <span class="text-blue-400 font-mono">FC</span> SCALE_X
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <button
+                        class="w-full text-left px-3 py-2 text-[10px] font-bold text-slate-500 uppercase flex items-center justify-between hover:text-white group">
+                        Contadores & Reg
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 group-hover:translate-y-1 text-slate-400"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m6 9 6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="pl-2 space-y-1">
+                        <div draggable="true"
+                            class="p-2 bg-slate-800/20 rounded border border-slate-800/50 text-[11px] cursor-pointer flex items-center gap-2">
+                            <span class="text-industrial-accent font-mono">FB</span> CTU / CTD
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-900/50 border-t border-slate-800">
+                <div class="p-3 bg-industrial-accent/10 border border-industrial-accent/20 rounded-lg">
+                    <p class="text-[10px] text-industrial-accent font-bold uppercase mb-1">Tip Task</p>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">Arrastra bloques a tu código para
+                        autocompletar la instanciación.</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Editor Area -->
+        <section class="flex-1 flex flex-col bg-slate-950">
+            <!-- Toolbar -->
+            <div
+                class="h-12 border-b border-slate-800 flex items-center justify-between px-4 bg-industrial-900/50 backdrop-blur">
+                <div class="flex items-center gap-2">
+                    <select id="pattern-selector"
+                        class="bg-slate-800 border border-slate-700 text-xs rounded px-3 py-1 outline-none focus:border-industrial-accent">
+                        <option value="">-- Generar Patrón Diseño --</option>
+                        <option value="state-machine">Máquina de Estados (State Machine)</option>
+                        <option value="factory">Patrón Factory (Producción)</option>
+                        <option value="strategy">Estrategia de Control (Flow)</option>
+                        <option value="pump-control">Control de Bombas (Histeresis)</option>
+                    </select>
+                    <button onclick="generateFromPattern()"
+                        class="p-1.5 bg-industrial-accent/10 text-industrial-accent rounded hover:bg-industrial-accent hover:text-white transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="validate-btn"
+                        class="flex items-center gap-2 px-3 py-1.5 bg-industrial-success/10 text-industrial-success hover:bg-industrial-success hover:text-white border border-industrial-success/20 rounded transition-all text-xs font-bold">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        VALIDAR ESTÁNDAR
+                    </button>
+                    <button id="optimize-btn"
+                        class="flex items-center gap-2 px-3 py-1.5 bg-industrial-warning/10 text-industrial-warning hover:bg-industrial-warning hover:text-white border border-industrial-warning/20 rounded transition-all text-xs font-bold">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v4" />
+                            <path d="m16.2 7.8 2.9-2.9" />
+                            <path d="M18 12h4" />
+                            <path d="m16.2 16.2 2.9 2.9" />
+                            <path d="M12 18v4" />
+                            <path d="m4.9 19.1 2.9-2.9" />
+                            <path d="M2 12h4" />
+                            <path d="m4.9 4.9 2.9 2.9" />
+                        </svg>
+                        OPTIMIZAR SCL
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editor Pane -->
+            <div class="flex-1 relative flex overflow-hidden">
+                <div id="line-numbers"
+                    class="editor-line-numbers py-4 text-slate-600 font-mono text-xs w-12 border-r border-slate-800">1
+                </div>
+                <textarea id="scl-editor" spellcheck="false"
+                    class="flex-1 bg-transparent p-4 font-mono text-sm text-slate-300 leading-relaxed"></textarea>
+            </div>
+
+            <!-- Diagnostics Console -->
+            <div class="h-64 border-t border-slate-800 flex flex-col bg-industrial-900">
+                <div class="flex items-center justify-between px-4 py-2 border-b border-slate-800 bg-slate-900/50">
+                    <div class="flex gap-4">
+                        <button id="tab-console"
+                            class="text-[10px] font-bold text-industrial-accent border-b border-industrial-accent pb-1 transition-all">CONSOLA
+                            DE DIAGNÓSTICO</button>
+                        <button id="tab-analysis"
+                            class="text-[10px] font-bold text-slate-500 hover:text-slate-300 pb-1 border-b border-transparent transition-all">ANÁLISIS
+                            DE
+                            FALLOS</button>
+                    </div>
+                    <div id="diagnostic-stat" class="text-[10px] text-slate-500 italic">Esperando validación...</div>
+                </div>
+                <div class="flex-1 relative overflow-hidden">
+                    <div id="console-output"
+                        class="absolute inset-0 p-4 font-mono text-xs space-y-2 overflow-y-auto scrollbar-hide">
+                        <div class="text-slate-500">[SYSTEM] IDE Inicializado. IEC 61131-3 Motor listo.</div>
+                        <div class="text-slate-500">[INFO] Cargue un patrón para comenzar o escriba su código en la
+                            ventana
+                            superior.</div>
+                    </div>
+                    <div id="analysis-output" class="absolute inset-0 p-6 hidden overflow-y-auto scrollbar-hide">
+                        <div class="flex flex-col items-center justify-center h-full text-slate-500 text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-4 opacity-20"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                            <p class="text-sm">Ejecute una validación para ver el análisis de seguridad detallado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Layouts or Overlays can go here -->
+
+    <script src="src/js/templates.js"></script>
+    <script src="src/js/validator.js"></script>
+    <script src="src/js/app.js"></script>
+</body>
+
+</html>
